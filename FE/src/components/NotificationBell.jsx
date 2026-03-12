@@ -43,8 +43,29 @@ export default function NotificationBell() {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+
+    const startPolling = () => {
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadNotifications();
+        }
+      }, 30000);
+      return interval;
+    };
+
+    let interval = startPolling();
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadNotifications();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadNotifications]);
 
   // Close dropdown when clicking outside

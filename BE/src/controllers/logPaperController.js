@@ -44,6 +44,9 @@ export const createLogPaper = async (req, res) => {
 
     // Notify assigned mentor(s) about the new log submission
     const studentUser = await User.findById(req.user.id).select("name");
+    if (!studentUser) {
+      console.warn(`⚠️ Could not find student user for id ${req.user.id} when creating log notification`);
+    }
     const mentorMappings = await MentorStudentMap.find({ studentId: req.user.id }).select("mentorId");
     if (mentorMappings.length > 0) {
       await createNotification(

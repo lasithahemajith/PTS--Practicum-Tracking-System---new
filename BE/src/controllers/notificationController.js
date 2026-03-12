@@ -1,11 +1,13 @@
 import Notification from "../models/notificationModel.js";
 
 // GET notifications for the current user (last 20, sorted newest first)
+const NOTIFICATION_LIMIT = 20;
+
 export const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(NOTIFICATION_LIMIT);
     const unreadCount = await Notification.countDocuments({ userId: req.user.id, read: false });
     res.json({ notifications, unreadCount });
   } catch (err) {
