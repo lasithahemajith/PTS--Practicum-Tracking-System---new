@@ -25,7 +25,7 @@ const tabs = [
 ];
 
 export default function TutorDashboardTabs() {
-  const [activeTab, setActiveTab] = useState("attendance");
+  const [activeTab, setActiveTab] = useState("logs");
 
   return (
     <div className="min-h-[calc(100vh-80px)]">
