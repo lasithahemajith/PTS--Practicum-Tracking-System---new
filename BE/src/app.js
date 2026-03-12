@@ -41,6 +41,11 @@ app.use("/audit", auditLogRoutes);
 app.use("/notifications", notificationRoutes);
 
 
+// Root health check
+app.get("/", (req, res) => {
+  res.json({ message: "Backend is running" });
+});
+
 // Connect MongoDB then start server
 connectMongo()
   .then(() => {
