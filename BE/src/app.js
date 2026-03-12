@@ -19,6 +19,8 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 dotenv.config();
 
 const app = express();
+// IMPORTANT for Render / proxies
+app.set("trust proxy", 1);
 
 // Serve static uploads
 app.use("/uploads", express.static(path.resolve("uploads")));
@@ -40,6 +42,11 @@ app.use("/dashboard", dashboardRoutes);
 app.use("/audit", auditLogRoutes);
 app.use("/notifications", notificationRoutes);
 
+
+// Root health check
+app.get("/", (req, res) => {
+  res.json({ message: "Backend is running" });
+});
 
 // Connect MongoDB then start server
 connectMongo()

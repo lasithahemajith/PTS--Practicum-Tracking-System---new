@@ -63,9 +63,6 @@ export default function MentorStudents() {
         )}
       </div>
 
-      <p className="text-xs text-slate-500 mt-3">
-        Data fetched from <code>/users/assigned-students</code> endpoint.
-      </p>
     </div>
   );
 }
