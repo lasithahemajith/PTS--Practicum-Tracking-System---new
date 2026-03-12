@@ -7,13 +7,15 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["student", "mentor", "tutor"],
-      default: "student",
+      enum: ["Student", "Mentor", "Tutor"],
+      required: true,
     },
-    mentorId: { type: Number }, // ✅ add this (mentor’s user.id from MySQL or other system)
-
+    phone: { type: String, default: null },
+    studentIndex: { type: String, unique: true, sparse: true },
+    company: { type: String, default: null },
+    mustChangePassword: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true } }
 );
 
 export default mongoose.model("User", userSchema);

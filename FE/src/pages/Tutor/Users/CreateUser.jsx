@@ -24,14 +24,22 @@ export default function CreateUser() {
     setGeneratedPassword("");
 
     try {
-      const res = await API.post("/users", {
+      const payload = {
         name: form.name,
         email: form.email,
         role: form.role,
         phone: form.phone,
-        studentIndex: form.role === "Student" ? form.studentIndex : null,
-        company: form.role === "Mentor" ? form.company : null,
-      });
+      };
+
+      if (form.role === "Student" && form.studentIndex) {
+        payload.studentIndex = form.studentIndex;
+      }
+
+      if (form.role === "Mentor" && form.company) {
+        payload.company = form.company;
+      }
+
+      const res = await API.post("/users", payload);
 
       setMessage(res.data.message || "✅ User created successfully");
       if (res.data.generatedPassword) setGeneratedPassword(res.data.generatedPassword);
@@ -46,12 +54,9 @@ export default function CreateUser() {
       });
     } catch (err) {
       console.error(err);
-      setMessage("❌ Failed to create user");
+      setMessage(err.response?.data?.error || "❌ Failed to create user");
     }
   };
-
-  const isStudent = form.role === "Student";
-  const isMentor = form.role === "Mentor";
 
   return (
     <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg">
@@ -106,34 +111,32 @@ export default function CreateUser() {
             onChange={handleChange}
             placeholder="Phone Number"
             className="w-full border p-2 rounded"
-            required
           />
         </div>
 
-        {/* Conditional Fields */}
-        {isStudent && (
+        {/* Student-only: Index Number */}
+        {form.role === "Student" && (
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Student Index ID
-            </label>
+            <label className="block text-sm font-medium mb-1">Index Number</label>
             <input
               name="studentIndex"
               value={form.studentIndex}
               onChange={handleChange}
-              placeholder="e.g., 2025-XXXX"
+              placeholder="e.g. EIT/2021/001"
               className="w-full border p-2 rounded"
             />
           </div>
         )}
 
-        {isMentor && (
+        {/* Mentor-only: Company */}
+        {form.role === "Mentor" && (
           <div>
             <label className="block text-sm font-medium mb-1">Company Name</label>
             <input
               name="company"
               value={form.company}
               onChange={handleChange}
-              placeholder="Enter company name"
+              placeholder="Company Name"
               className="w-full border p-2 rounded"
             />
           </div>
@@ -142,6 +145,7 @@ export default function CreateUser() {
         {/* Info */}
         <div className="bg-indigo-50 text-sm text-gray-700 p-3 rounded-md">
           Password will be auto-generated and securely stored. Tutors can view it once.
+          The user will be required to change their password on first login.
         </div>
 
         <button

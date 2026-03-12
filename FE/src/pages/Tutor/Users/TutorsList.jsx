@@ -34,7 +34,7 @@ export default function TutorsList() {
           </thead>
           <tbody>
             {tutors.map((t, i) => (
-              <tr key={t.id} className="text-center hover:bg-indigo-50">
+              <tr key={t._id} className="text-center hover:bg-indigo-50">
                 <td className="border p-2">{i + 1}</td>
                 <td className="border p-2">{t.name}</td>
                 <td className="border p-2">{t.email}</td>
