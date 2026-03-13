@@ -38,7 +38,11 @@ export default function UserDetail() {
     );
 
   const userMappings = mappings.filter(
-    (m) => m.mentor?.id === id || m.student?.id === id
+    (m) =>
+      m.mentor?.id === id ||
+      m.student?.id === id ||
+      m.mentor?._id?.toString() === id ||
+      m.student?._id?.toString() === id
   );
 
   const roleColor =

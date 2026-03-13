@@ -26,6 +26,15 @@ const passwordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// General rate limiter for data-fetching endpoints
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  message: { error: "Too many requests. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // All require auth
 router.use(verifyToken);
 
@@ -50,6 +59,6 @@ router.get("/", getUsersByRole);
 router.get("/mappings", getMappings);
 
 // Get single user by ID (must come after all specific /path routes)
-router.get("/:userId", getUserById);
+router.get("/:userId", generalLimiter, getUserById);
 
 export default router;

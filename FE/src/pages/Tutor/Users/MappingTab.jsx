@@ -132,7 +132,7 @@ export default function MappingTab() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by mentor or student name…"
+          placeholder="Search by mentor name, student name or index…"
           className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400"
         />
       </div>
