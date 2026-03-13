@@ -29,6 +29,9 @@ import ReportsTabs from "@/pages/Tutor/Reports/ReportsTabs";
 import TutorFeedback from "@/pages/Tutor/Reports/TutorFeedback";
 import TutorDashboardTabs from "@/pages/Tutor/Dashboards/TutorDashboardTabs";
 
+// ABOUT PTS
+import AboutPTS from "@/pages/AboutPTS/AboutPTS";
+
 /* -------------------------------------------------------------
    🔐 Protected Route Wrapper
 ------------------------------------------------------------- */
@@ -206,6 +209,16 @@ export default function AppRoutes() {
         </Route>
 
         <Route path="/tutor/dashboards" element={<TutorDashboardTabs />} />
+
+        {/* ---------- ABOUT PTS (all roles) ---------- */}
+        <Route
+          path="about"
+          element={
+            <ProtectedRoute allowedRoles={["Student", "Mentor", "Tutor"]}>
+              <AboutPTS />
+            </ProtectedRoute>
+          }
+        />
 
       </Route>
 
