@@ -37,21 +37,106 @@ const roleBadge = {
   Tutor: "bg-purple-100 text-purple-700",
 };
 
+/* ─────────────────────────────────────────────────────────────
+   CheckboxGroup – reusable section for Tutor multi-select
+───────────────────────────────────────────────────────────── */
+function CheckboxGroup({ group, selectedIds, onToggle }) {
+  const allIds = group.users.map((u) => u._id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+  const someSelected = allIds.some((id) => selectedIds.includes(id));
+
+  const handleToggleAll = () => {
+    if (allSelected) {
+      onToggle(allIds, false);
+    } else {
+      onToggle(allIds, true);
+    }
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Group header with Select All */}
+      <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
+        <span className="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1.5">
+          <Users size={12} />
+          {group.label}
+          <span className="text-gray-400 font-normal">({group.users.length})</span>
+        </span>
+        {group.users.length > 0 && (
+          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-indigo-600 font-medium">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+              onChange={handleToggleAll}
+              className="accent-indigo-600"
+            />
+            Select All
+          </label>
+        )}
+      </div>
+
+      {/* User list */}
+      <div className="max-h-40 overflow-y-auto divide-y divide-gray-100">
+        {group.users.length === 0 ? (
+          <p className="px-3 py-3 text-sm text-gray-400 text-center">
+            No {group.label.toLowerCase()} found
+          </p>
+        ) : (
+          group.users.map((u) => (
+            <label
+              key={u._id}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-indigo-50 transition"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(u._id)}
+                onChange={() => onToggle([u._id], !selectedIds.includes(u._id))}
+                className="accent-indigo-600"
+              />
+              <span className="text-sm font-medium text-gray-700 flex-1 truncate">{u.name}</span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                  roleBadge[u.role] || "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {u.role}
+              </span>
+            </label>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    COMPOSE MODAL
 ═══════════════════════════════════════════════════════════════ */
-function ComposeModal({ onClose, onSent, groups }) {
+function ComposeModal({ onClose, onSent, groups, isTutor }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Recipient selection state
-  // A group can be "broadcast" (send to all in that group) or "individual" (pick specific users)
-  const [selectedBroadcast, setSelectedBroadcast] = useState(null); // broadcastType string or null
-  const [selectedIds, setSelectedIds] = useState([]); // individual user IDs
-  const [recipientMode, setRecipientMode] = useState(null); // "broadcast" | "individual"
-  const [activeGroup, setActiveGroup] = useState(null); // which individual group is selected
+  // ── Tutor state: multi-group selection (both students and mentors) ──
+  const [tutorSelectedIds, setTutorSelectedIds] = useState([]);
 
+  // ── Non-tutor state: broadcast OR single-group individual pick ──
+  const [selectedBroadcast, setSelectedBroadcast] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [recipientMode, setRecipientMode] = useState(null); // "broadcast" | "individual"
+  const [activeGroup, setActiveGroup] = useState(null);
+
+  // ── Tutor helpers ──
+  const handleTutorToggle = (ids, add) => {
+    setTutorSelectedIds((prev) => {
+      const set = new Set(prev);
+      ids.forEach((id) => (add ? set.add(id) : set.delete(id)));
+      return [...set];
+    });
+  };
+
+  // ── Non-tutor helpers ──
   const handleGroupBtnClick = (group) => {
     if (group.type === "broadcast") {
       setRecipientMode("broadcast");
@@ -74,14 +159,22 @@ function ComposeModal({ onClose, onSent, groups }) {
   const handleSend = async () => {
     if (!subject.trim()) return toast.error("Subject is required");
     if (!body.trim()) return toast.error("Message body is required");
-    if (!recipientMode) return toast.error("Please select recipients");
-    if (recipientMode === "individual" && selectedIds.length === 0)
-      return toast.error("Please select at least one recipient");
+
+    if (isTutor) {
+      if (tutorSelectedIds.length === 0)
+        return toast.error("Please select at least one recipient");
+    } else {
+      if (!recipientMode) return toast.error("Please select recipients");
+      if (recipientMode === "individual" && selectedIds.length === 0)
+        return toast.error("Please select at least one recipient");
+    }
 
     setSending(true);
     try {
       const payload = { subject: subject.trim(), body: body.trim() };
-      if (recipientMode === "broadcast") {
+      if (isTutor) {
+        payload.recipientIds = tutorSelectedIds;
+      } else if (recipientMode === "broadcast") {
         payload.broadcastType = selectedBroadcast;
       } else {
         payload.recipientIds = selectedIds;
@@ -96,6 +189,8 @@ function ComposeModal({ onClose, onSent, groups }) {
       setSending(false);
     }
   };
+
+  const tutorTotal = tutorSelectedIds.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -120,86 +215,110 @@ function ComposeModal({ onClose, onSent, groups }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-          {/* Recipients */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">
-              To
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {groups.map((group) => {
-                const isActive =
-                  group.type === "broadcast"
-                    ? recipientMode === "broadcast" && selectedBroadcast === group.broadcastType
-                    : recipientMode === "individual" && activeGroup?.label === group.label;
-                return (
-                  <button
+          {/* ──── TUTOR: two checkbox-group sections ──── */}
+          {isTutor ? (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">
+                To
+                {tutorTotal > 0 && (
+                  <span className="ml-2 normal-case font-normal text-indigo-600">
+                    {tutorTotal} recipient{tutorTotal !== 1 ? "s" : ""} selected
+                  </span>
+                )}
+              </label>
+              <div className="space-y-3">
+                {groups.map((group) => (
+                  <CheckboxGroup
                     key={group.label}
-                    onClick={() => handleGroupBtnClick(group)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                      isActive
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
-                    }`}
-                  >
-                    {group.type === "broadcast" ? (
-                      <Users size={14} />
-                    ) : (
-                      <User size={14} />
-                    )}
-                    {group.label}
-                    {group.type === "broadcast" && (
-                      <span className="ml-1 text-xs opacity-70">({group.users.length})</span>
-                    )}
-                  </button>
-                );
-              })}
+                    group={group}
+                    selectedIds={tutorSelectedIds}
+                    onToggle={handleTutorToggle}
+                  />
+                ))}
+              </div>
             </div>
+          ) : (
+            /* ──── STUDENT / MENTOR: broadcast or single-group pick ──── */
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">
+                To
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {groups.map((group) => {
+                  const isActive =
+                    group.type === "broadcast"
+                      ? recipientMode === "broadcast" && selectedBroadcast === group.broadcastType
+                      : recipientMode === "individual" && activeGroup?.label === group.label;
+                  return (
+                    <button
+                      key={group.label}
+                      onClick={() => handleGroupBtnClick(group)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                        isActive
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
+                      }`}
+                    >
+                      {group.type === "broadcast" ? (
+                        <Users size={14} />
+                      ) : (
+                        <User size={14} />
+                      )}
+                      {group.label}
+                      {group.type === "broadcast" && (
+                        <span className="ml-1 text-xs opacity-70">({group.users.length})</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-            {/* Individual user picker */}
-            <AnimatePresence>
-              {recipientMode === "individual" && activeGroup && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 border border-gray-200 rounded-xl overflow-hidden"
-                >
-                  <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Select from {activeGroup.label}
-                  </div>
-                  <div className="max-h-40 overflow-y-auto divide-y divide-gray-100">
-                    {activeGroup.users.length === 0 ? (
-                      <p className="px-3 py-3 text-sm text-gray-400 text-center">
-                        No {activeGroup.label.toLowerCase()} assigned yet
-                      </p>
-                    ) : (
-                      activeGroup.users.map((u) => (
-                        <label
-                          key={u._id}
-                          className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-indigo-50 transition"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(u._id)}
-                            onChange={() => toggleUserId(u._id)}
-                            className="accent-indigo-600"
-                          />
-                          <span className="text-sm font-medium text-gray-700 flex-1">{u.name}</span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              roleBadge[u.role] || "bg-gray-100 text-gray-600"
-                            }`}
+              {/* Individual user picker */}
+              <AnimatePresence>
+                {recipientMode === "individual" && activeGroup && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-3 border border-gray-200 rounded-xl overflow-hidden"
+                  >
+                    <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                      Select from {activeGroup.label}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto divide-y divide-gray-100">
+                      {activeGroup.users.length === 0 ? (
+                        <p className="px-3 py-3 text-sm text-gray-400 text-center">
+                          No {activeGroup.label.toLowerCase()} assigned yet
+                        </p>
+                      ) : (
+                        activeGroup.users.map((u) => (
+                          <label
+                            key={u._id}
+                            className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-indigo-50 transition"
                           >
-                            {u.role}
-                          </span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(u._id)}
+                              onChange={() => toggleUserId(u._id)}
+                              className="accent-indigo-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700 flex-1">{u.name}</span>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                roleBadge[u.role] || "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {u.role}
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Subject */}
           <div>
@@ -400,7 +519,7 @@ export default function MessagesPage() {
                   {user?.role === "Mentor" &&
                     "Send messages to your assigned students or all tutors."}
                   {user?.role === "Tutor" &&
-                    "Send messages to all students or individual mentors."}
+                    "Send messages to any combination of students and mentors."}
                 </p>
               </div>
               <button
@@ -479,6 +598,7 @@ export default function MessagesPage() {
         {showCompose && (
           <ComposeModal
             groups={groups}
+            isTutor={user?.role === "Tutor"}
             onClose={() => setShowCompose(false)}
             onSent={fetchData}
           />

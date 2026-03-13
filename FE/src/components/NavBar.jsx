@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { getInitials, roleAvatarBg } from "@/utils/roleColors";
 import NotificationBell from "@/components/NotificationBell";
+import MessageBell from "@/components/MessageBell";
 
 
 
@@ -36,6 +37,7 @@ export default function Navbar({ onLogout, onMenuToggle }) {
 
       <div className="flex items-center gap-3">
         <NotificationBell />
+        <MessageBell />
 
         {/* User info + avatar */}
         <div className="flex items-center gap-2 pl-2 border-l border-gray-200">

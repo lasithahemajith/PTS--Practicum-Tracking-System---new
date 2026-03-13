@@ -40,14 +40,12 @@ export const getAvailableRecipients = async (req, res) => {
         { label: "All Tutors", type: "broadcast", broadcastType: "all_tutors", users: tutors },
       ];
     } else if (role === "Tutor") {
-      // All students (as a group option)
+      // Tutors can select any combination of students and mentors
       const students = await User.find({ role: "Student" }).select("_id name email role");
-
-      // All mentors (selectable individually)
       const mentors = await User.find({ role: "Mentor" }).select("_id name email role");
 
       groups = [
-        { label: "All Students", type: "broadcast", broadcastType: "all_students", users: students },
+        { label: "Students", type: "individual", users: students },
         { label: "Mentors", type: "individual", users: mentors },
       ];
     }
@@ -72,11 +70,10 @@ export const sendMessage = async (req, res) => {
     let resolvedRecipientIds = [];
 
     if (broadcastType) {
-      // Validate broadcast is allowed for the role
+      // Validate broadcast is allowed for the role (students/mentors broadcast to all tutors only)
       const allowedBroadcasts = {
         Student: ["all_tutors"],
         Mentor: ["all_tutors"],
-        Tutor: ["all_students"],
       };
 
       if (!allowedBroadcasts[role]?.includes(broadcastType)) {
@@ -85,8 +82,6 @@ export const sendMessage = async (req, res) => {
 
       const roleMap = {
         all_tutors: "Tutor",
-        all_students: "Student",
-        all_mentors: "Mentor",
       };
 
       const targetRole = roleMap[broadcastType];
@@ -117,13 +112,13 @@ export const sendMessage = async (req, res) => {
           }
         }
       } else if (role === "Tutor") {
-        // Tutors can only message individual mentors via individual selection
+        // Tutors can message any combination of students and mentors
         const recipientUsers = await User.find({ _id: { $in: recipientIds } }).select("role");
         for (const u of recipientUsers) {
-          if (u.role !== "Mentor") {
+          if (!["Student", "Mentor"].includes(u.role)) {
             return res
               .status(403)
-              .json({ error: "Tutors can individually message only mentors" });
+              .json({ error: "Tutors can only message students and mentors" });
           }
         }
       }
